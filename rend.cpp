@@ -6,37 +6,19 @@ opengl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum seve
     SDL_Log("message: %s\n", message);
     switch (type)
     {
-        case GL_DEBUG_TYPE_ERROR:
-        SDL_Log("type: ERROR");
-        break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-        SDL_Log("type: DEPRECATED_BEHAVIOR");
-        break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-        SDL_Log("type: UNDEFINED_BEHAVIOR");
-        break;
-        case GL_DEBUG_TYPE_PORTABILITY:
-        SDL_Log("type: PORTABILITY");
-        break;
-        case GL_DEBUG_TYPE_PERFORMANCE:
-        SDL_Log("type: PERFORMANCE");
-        break;
-        case GL_DEBUG_TYPE_OTHER:
-        SDL_Log("type: OTHER");
-        break;
+        case GL_DEBUG_TYPE_ERROR: SDL_Log("type: ERROR"); break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: SDL_Log("type: DEPRECATED_BEHAVIOR"); break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: SDL_Log("type: UNDEFINED_BEHAVIOR"); break;
+        case GL_DEBUG_TYPE_PORTABILITY: SDL_Log("type: PORTABILITY"); break;
+        case GL_DEBUG_TYPE_PERFORMANCE: SDL_Log("type: PERFORMANCE"); break;
+        case GL_DEBUG_TYPE_OTHER: SDL_Log("type: OTHER"); break;
     }
     SDL_Log("id: %d", id);
     switch(severity)
     {
-        case GL_DEBUG_SEVERITY_LOW:
-        SDL_Log("severity: LOW\n");
-        break;
-        case GL_DEBUG_SEVERITY_MEDIUM:
-        SDL_Log("severity: MEDIUM\n");
-        break;
-        case GL_DEBUG_SEVERITY_HIGH:
-        SDL_Log("severity: HIGH\n");
-        break;
+        case GL_DEBUG_SEVERITY_LOW: SDL_Log("severity: LOW\n"); break;
+        case GL_DEBUG_SEVERITY_MEDIUM: SDL_Log("severity: MEDIUM\n"); break;
+        case GL_DEBUG_SEVERITY_HIGH: SDL_Log("severity: HIGH\n"); break;
     }
 }
 
