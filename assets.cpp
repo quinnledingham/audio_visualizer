@@ -73,49 +73,75 @@ init_bitmap_handle(Bitmap *bitmap)
 function void
 sdl_print_audio_spec(SDL_AudioSpec *audio_spec)
 {
-    printf("\naudio_spec\n");
-    printf("freq %d\n", audio_spec->freq);
-    printf("format %d\n", SDL_AUDIO_BITSIZE(audio_spec->format));
-    printf("channels %d\n", audio_spec->channels);
-    printf("silence %d\n", audio_spec->silence);
-    printf("samples %d\n", audio_spec->samples);
-    printf("size %d\n", audio_spec->size);
+    SDL_Log("\naudio_spec\n");
+    SDL_Log("freq %d\n", audio_spec->freq);
+    SDL_Log("format %d\n", SDL_AUDIO_BITSIZE(audio_spec->format));
+    SDL_Log("channels %d\n", audio_spec->channels);
+    SDL_Log("silence %d\n", audio_spec->silence);
+    SDL_Log("samples %d\n", audio_spec->samples);
+    SDL_Log("size %d\n", audio_spec->size);
 }
 
-u8 *position;
-u32 length_remaining;
+function void
+sdl_print_audio_device_status(SDL_AudioDeviceID dev)
+{
+    printf("audio device id: %d, ", dev);
+    switch (SDL_GetAudioDeviceStatus(dev))
+    {
+        case SDL_AUDIO_STOPPED: printf("stopped\n"); break;
+        case SDL_AUDIO_PLAYING: printf("playing\n"); break;
+        case SDL_AUDIO_PAUSED: printf("paused\n"); break;
+        default: printf("???"); break;
+    }
+}
 
+function SDL_AudioDeviceID
+sdl_load_audio_device(SDL_AudioSpec *spec)
+{
+    SDL_Log("loading audio device\n");
+    u32 num_of_audio_devices = SDL_GetNumAudioDevices(0);
+    SDL_Log("num audio devices: %d\n", num_of_audio_devices);
+    for (u32 i = 0; i < num_of_audio_devices; i++)
+        SDL_Log("name: %s\n", SDL_GetAudioDeviceName(i, 0));
+    
+    SDL_AudioDeviceID device_id = SDL_OpenAudioDevice(NULL, 0, spec, NULL, 0);
+    SDL_Log("id: %d\n", device_id);
+    sdl_print_audio_spec(spec);
+    
+    return device_id;
+}
+
+// this could be a generic function that you call when you want to
+// fill the sound buffer
 void
-sound_callback(void *userdata, u8 *stream, int length_requested)
+sound_callback(void *userdata, u8 *stream, s32 length_requested)
 {
     Playing_Sound *playing_sound = (Playing_Sound*)userdata;
     
-    if (length_remaining == 0)
-        return;
+    s32 length = length_requested;
+    if (length > playing_sound->length_remaining)
+        length = playing_sound->length_remaining;
     
-    //u32 length_to_mix = (u32)length_requested;
-    //if (length_to_mix > length_remaining)
-    //length_to_mix = length_remaining;
+    for (int i = 0; i < length; i++)
+        stream[i] = playing_sound->position[i];
     
-    length_requested = ( length_requested > length_remaining ? length_remaining : length_requested );
+    playing_sound->position += length;
+    playing_sound->length_remaining -= length;
     
-    SDL_MixAudio(stream, position, length_requested, SDL_MIX_MAXVOLUME);
-    
-    printf("%d\n", position);
-    
-    //playing_sound->position += (int)(length_to_mix);
-    //playing_sound->length_remaining -= (int)(length_to_mix);
-    
-    position += length_requested;
-    printf("%d\n", position);
-    length_remaining -= length_requested;
+    printf("%d\n", playing_sound->length_remaining);
+    if (playing_sound->length_remaining == 0)
+    {
+        SDL_CloseAudioDevice(playing_sound->device_id);
+    }
 }
 
 function Sound
 load_sound(const char *filename)
 {
     Sound sound = {};
+    //SDL_AudioSpec spec = {};
     SDL_LoadWAV(filename, &sound.spec, &sound.buffer, &sound.length);
+    //sdl_print_audio_spec(&sound.spec);
     return sound;
 }
 
@@ -123,28 +149,30 @@ function void
 play_sound(Audio *audio, Sound *sound)
 {
     Playing_Sound *playing_sound = &audio->sounds[audio->num_of_playing_sounds++];
+    
     playing_sound->position = sound->buffer;
     playing_sound->length_remaining = sound->length;
     sound->spec.callback = sound_callback;
     sound->spec.userdata = playing_sound;
     
-    position = sound->buffer;
-    length_remaining = sound->length;
-    
-    /*
-    u32 num_of_audio_devices = SDL_GetNumAudioDevices(0);
-    printf("num audio devices: %d\n", num_of_audio_devices);
-    for (u32 i = 0; i < num_of_audio_devices; i++)
-        printf("name: %s\n", SDL_GetAudioDeviceName(i, 0));
-    */
-    
-    //SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL, 0, &sound->spec, 0, 0);
-    //SDL_PauseAudioDevice(device, 0);
-    
-    SDL_OpenAudio(&sound->spec, NULL);
-    SDL_PauseAudio(0);
-    
-    sdl_print_audio_spec(&sound->spec);
+    SDL_AudioDeviceID device_id;
+    device_id = sdl_load_audio_device(&sound->spec);
+    SDL_PauseAudioDevice(device_id, 0);
+    playing_sound->device_id = device_id;
+}
+
+function void
+unpause_sound(Playing_Sound *playing_sound)
+{
+    SDL_PauseAudioDevice(playing_sound->device_id, 0);
+    sdl_print_audio_device_status(playing_sound->device_id);
+}
+
+function void
+pause_sound(Playing_Sound *playing_sound)
+{
+    SDL_PauseAudioDevice(playing_sound->device_id, 1);
+    sdl_print_audio_device_status(playing_sound->device_id);
 }
 
 //

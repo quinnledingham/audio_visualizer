@@ -28,10 +28,13 @@ struct Playing_Sound
 {
     u8 *position;
     u32 length_remaining;
+    SDL_AudioDeviceID device_id;
 };
 
 struct Audio
 {
+    b32 playing;
+    
     Playing_Sound sounds[10];
     u32 num_of_playing_sounds;
 };

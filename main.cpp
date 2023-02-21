@@ -36,20 +36,6 @@ text active_color
 Input:
 */
 
-struct Menu_Button
-{
-    v2 coords;
-    v2 dim;
-    v4 back_color;
-    v4 active_color;
-    
-    const char *text;
-    Font *font;
-    f32 text_pixel_height;
-    v4 text_color;
-    v4 active_text_color;
-};
-
 function b32
 coords_in_bounds(v2 coords, v2 top_left, v2 bottom_right)
 {
@@ -116,7 +102,6 @@ struct Controller
     v2 mouse_coords;
     v2 mouse_rel_coords;
     
-    
     union
     {
         struct
@@ -156,7 +141,7 @@ load_assets(Assets *assets)
     
     assets->num_of_sounds = 1;
     assets->sounds = (Sound*)malloc(sizeof(Sound) * assets->num_of_sounds);
-    assets->sounds[0] = load_sound("../assets/gulp.wav");
+    assets->sounds[0] = load_sound("../assets/bornintheusa.wav");
 }
 
 function void
@@ -168,41 +153,123 @@ do_one_frame(Application *app)
                                                   (r32)app->window_dim.Width, (r32)app->window_dim.Height,
                                                   0.0f, -3.0f, 3.0f);
     
-    
     Font *font = &app->assets.font;
     Controller *controller = &app->controller;\
     
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     
-    draw_rect({0, 0}, {100, 100}, &app->assets.bitmap);
+    Sound *sound = &app->assets.sounds[0];
+    Playing_Sound *playing_sound = &app->audio.sounds[0];
+    if (playing_sound->length_remaining != 0)
+    {
+        // Progress Bar
+        if (on_down(controller->left_mouse) && 
+            coords_in_bounds(controller->mouse_coords, {0, 0}, {(f32)app->window_dim.x, 100}))
+        {
+            u32 length_played = sound->length - playing_sound->length_remaining;
+            f32 new_progress = (f32)controller->mouse_coords.x / (f32)app->window_dim.x;
+            u32 new_length_played = u32(new_progress * (f32)sound->length);
+            s32 diff_length_played = new_length_played - length_played;
+            
+            if (diff_length_played % 2 != 0)
+                diff_length_played++;
+            
+            SDL_LockAudioDevice(playing_sound->device_id);
+            playing_sound->position += diff_length_played;
+            playing_sound->length_remaining -= diff_length_played;
+            SDL_UnlockAudioDevice(playing_sound->device_id);
+            
+            printf("%d\n", playing_sound->length_remaining);
+        }
+        
+        u32 length_played = sound->length - playing_sound->length_remaining;
+        f32 progress = (f32)length_played / (f32)sound->length;
+        progress *= app->window_dim.x;
+        
+        draw_rect({0, 0}, {progress, 100}, { 255, 0, 0, 1 });
+        
+        // Visualizer
+        u32 num_of_bars = 100;
+        f32 bar_width = ((f32)app->window_dim.x / 2.0f) / (f32)num_of_bars;
+        
+        u8 *ptr = playing_sound->position;
+        
+        f32 heights[101];
+        f32 heights_total;
+        for (s32 i = num_of_bars; i >= 0; i--)
+        {
+            f32 amt_avg = 200.0f;
+            f32 total = 0.0f;
+            for (s32 j = 0; j < (s32)amt_avg; j++)
+            {
+                total += (f32)*ptr--;
+            }
+            heights[i] = total / amt_avg;
+            heights_total += heights[i];
+        }
+        f32 heights_avg = heights_total / 101.0f;
+        
+        for (s32 i = num_of_bars; i >= 0; i--)
+        {
+            f32 left_bar_x = i * bar_width;
+            f32 right_bar_x = (f32)app->window_dim.x - ((i + 1) * bar_width);
+            v4 color = { 255, 0, 0, 1 };
+            
+            f32 height = heights[i];
+            
+            if (heights[i] > heights[i - 1])
+                height *= 2.0f;
+            
+            f32 divd = (num_of_bars - i);
+            if (divd > 81)
+            {
+                height /= divd - 80;
+                height *= 2.0f;
+            }
+            
+            //if (heights[i] > heights_avg)
+            //height *= 2.0f;
+            
+            
+            //printf("%f\n", total);
+            f32 bar_y = ((f32)app->window_dim.y / 2.0f) - (height / 2.0f);
+            draw_rect({left_bar_x, bar_y}, {bar_width, height}, color);
+            draw_rect({right_bar_x, bar_y}, {bar_width, height}, color);
+        }
+    }
     
     // Menu
-    v2 menu_coords = { 100, 100 };
-    v2 active_coords = {};
-    v2 button_dim = { 130, 50 };
-    b32 press = false;
-    
-    if (controller->mouse_enabled)
     {
-        active_coords = controller->mouse_coords;
-        press = on_down(controller->left_mouse);
-    }
-    
-    if (menu_button(menu_coords, button_dim, {0, 255, 0, 1}, {0, 150, 0, 1},
-                    "Play", font, 40, {0, 0, 255, 1}, {0, 0, 150, 1},
-                    active_coords, press))
-    {
-        log("play");
-        play_sound(&app->audio, &app->assets.sounds[0]);
-    }
-    
-    menu_coords.x += button_dim.x + 5;
-    
-    if (menu_button(menu_coords, button_dim, {0, 255, 0, 1}, {0, 150, 0, 1},
-                    "Pause", font, 40, {0, 0, 255, 1}, {0, 0, 150, 1},
-                    active_coords, press))
-    {
-        log("pause");
+        v2 menu_coords = { 10, 110 };
+        v2 active_coords = {};
+        v2 button_dim = { 130, 50 };
+        v4 back_color = {255, 0, 0, 1};
+        b32 press = false;
+        
+        if (controller->mouse_enabled)
+        {
+            active_coords = controller->mouse_coords;
+            press = on_down(controller->left_mouse);
+        }
+        
+        if (menu_button(menu_coords, button_dim, back_color, {0, 150, 0, 1},
+                        "Play", font, 40, {0, 0, 255, 1}, {0, 0, 150, 1},
+                        active_coords, press))
+        {
+            if (app->audio.num_of_playing_sounds == 0)
+                play_sound(&app->audio, &app->assets.sounds[0]);
+            else
+                unpause_sound(&app->audio.sounds[0]);
+        }
+        
+        menu_coords.x += button_dim.x + 5;
+        
+        if (menu_button(menu_coords, button_dim, back_color, {0, 150, 0, 1},
+                        "Pause", font, 40, {0, 0, 255, 1}, {0, 0, 150, 1},
+                        active_coords, press))
+        {
+            pause_sound(&app->audio.sounds[0]);
+        }
     }
     
     // FPS
@@ -215,15 +282,21 @@ do_one_frame(Application *app)
     draw_string(font, fps_string, {app->window_dim.x - dim.x, dim.y}, 50, {1.0f, 0.0f, 0.0f, 1.0f});
 }
 
+struct SDL
+{
+    SDL_Window *window;
+    SDL_AudioDeviceID device_id;
+};
+
 function void
-main_loop(SDL_Window *window)
+main_loop(SDL *sdl)
 {
     Application app = {};
     
     Controller *controller = &app.controller;
     controller->left_mouse.id = SDL_BUTTON_LEFT;
     
-    SDL_GetWindowSize(window, &app.window_dim.Width, &app.window_dim.Height);
+    SDL_GetWindowSize(sdl->window, &app.window_dim.Width, &app.window_dim.Height);
     load_assets(&app.assets);
     u32 last_frame_run_time_ms = 0;
     
@@ -240,14 +313,20 @@ main_loop(SDL_Window *window)
             {
                 case SDL_QUIT: return;
                 
-                case SDL_WINDOWEVENT_RESIZED:
-                case SDL_WINDOWEVENT_SIZE_CHANGED:
+                case SDL_WINDOWEVENT:
                 {
                     SDL_WindowEvent *window_event = &event.window;
                     
-                    app.window_dim.Width = window_event->data1;
-                    app.window_dim.Height = window_event->data2;
-                    glViewport(0, 0, app.window_dim.Width, app.window_dim.Height);
+                    switch(window_event->event)
+                    {
+                        case SDL_WINDOWEVENT_RESIZED:
+                        case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        {
+                            app.window_dim.Width = window_event->data1;
+                            app.window_dim.Height = window_event->data2;
+                            glViewport(0, 0, app.window_dim.Width, app.window_dim.Height);
+                        } break;
+                    }
                 } break;
                 
                 case SDL_MOUSEMOTION:
@@ -286,7 +365,12 @@ main_loop(SDL_Window *window)
         
         do_one_frame(&app);
         
-        SDL_GL_SwapWindow(window);
+        //if (app.audio.playing)
+        //SDL_PauseAudioDevice(device_id, 0);
+        //else
+        //SDL_PauseAudioDevice(device_id, 1);
+        
+        SDL_GL_SwapWindow(sdl->window);
     }
 }
 
@@ -332,17 +416,19 @@ sdl_init_opengl(SDL_Window *window)
 
 int main(int argc, char* argv[])
 {
+    SDL sdl = {};
+    
     SDL_Init(SDL_INIT_VIDEO | 
              SDL_INIT_GAMECONTROLLER | 
              SDL_INIT_HAPTIC | 
              SDL_INIT_AUDIO);
     
-    SDL_Window *window = SDL_CreateWindow("Audio Visualizer", 
-                                          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-                                          800, 800, 
-                                          SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
-    sdl_init_opengl(window);
-    main_loop(window);
+    sdl.window = SDL_CreateWindow("Audio Visualizer", 
+                                  SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
+                                  800, 800, 
+                                  SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+    sdl_init_opengl(sdl.window);
+    main_loop(&sdl);
     
     return 0;
 }
