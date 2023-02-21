@@ -9,16 +9,58 @@
 #define DEG2RAD 0.0174533f
 #define PI 3.14159265359f
 
-inline f32
-dot_product(const v2 &l, const v2 &r)
+// v2
+inline v2 operator+(const v2 &l, const v2 &r) { return { l.x + r.x, l.y + r.y }; }
+inline f32 dot_product(const v2 &l, const v2 &r) { return (l.x * r.x) + (l.y * r.y); }
+inline f32 length_squared(const v2 &v) { return (v.x * v.x) + (v.y * v.y); }
+
+inline v2
+normalized(const v2 &v)
 {
-    return (l.x * r.x) + (l.y * r.y);
+    real32 len_sq = length_squared(v);
+    if (len_sq < V2_EPSILON)
+        return v;
+    else
+    {
+        real32 inverse_length = 1.0f / sqrtf(len_sq);
+        return {v.x * inverse_length, v.y * inverse_length };
+    }
 }
 
-inline f32
-dot_product(const v3 &l, const v3 &r)
+// v3
+inline v3 operator+(const v3 &l, const v3 &r) { return {l.x + r.x, l.y + r.y, l.z + r.z }; }
+inline v3 operator-(const v3 &l, const v3 &r) { return {l.x - r.x, l.y - r.y, l.z - r.z}; }
+inline v3 operator*(const v3 &l, const v3 &r) { return {l.x * r.x, l.y * r.y, l.z * r.z}; }
+inline v3 operator*(const v3 &v, float f) { return {v.x * f, v.y * f, v.z * f}; }
+inline f32 dot_product(const v3 &l, const v3 &r) { return (l.x * r.x) + (l.y * r.y) + (l.z * r.z); }
+inline real32 length_squared(const v3 &v) { return (v.x * v.x) + (v.y * v.y) + (v.z * v.z); }
+
+inline void
+normalize(v3 &v)
 {
-    return (l.x * r.x) + (l.y * r.y) + (l.z * r.z);
+    real32 len_sq = length_squared(v);
+    if (len_sq < V3_EPSILON)
+        return;
+    else
+    {
+        real32 inverse_length = 1.0f / sqrtf(len_sq);
+        v.x *= inverse_length;
+        v.y *= inverse_length;
+        v.z *= inverse_length;
+    }
+}
+
+inline v3
+normalized(const v3 &v)
+{
+    real32 len_sq = length_squared(v);
+    if (len_sq < V3_EPSILON)
+        return v;
+    else
+    {
+        real32 inverse_length = 1.0f / sqrtf(len_sq);
+        return {v.x * inverse_length, v.y * inverse_length, v.z * inverse_length};
+    }
 }
 
 inline v3
@@ -29,78 +71,6 @@ cross_product(const v3 &l, const v3 &r)
         (l.y * r.z - l.z * r.y),
         (l.z * r.x - l.x * r.z),
         (l.x * r.y - l.y * r.x)
-    };
-}
-
-inline v3
-operator+(const v3 &l, const v3 &r)
-{
-    return {l.x + r.x, l.y + r.y, l.z + r.z};
-}
-
-inline void
-operator+=(v3 &l, const v3 &r)
-{
-    l.x = l.x + r.x;
-    l.y = l.y + r.y;
-    l.z = l.z + r.z;
-}
-
-inline v3
-operator-(const v3 &l, const v3 &r)
-{
-    return {l.x - r.x, l.y - r.y, l.z - r.z};
-}
-
-inline void
-operator-=(v3 &l, const v3 &r)
-{
-    l.x = l.x - r.x;
-    l.y = l.y - r.y;
-    l.z = l.z - r.z;
-}
-
-inline v3
-operator*(const v3 &l, const v3 &r)
-{
-    return {l.x * r.x, l.y * r.y, l.z * r.z};
-}
-
-inline v3
-operator*(const v3 &v, float f)
-{
-    return {v.x * f, v.y * f, v.z * f};
-}
-
-inline void
-operator*=(v3 &l, v3 &r)
-{
-    l.x *= r.x;
-    l.y *= r.y;
-    l.z *= r.z;
-}
-
-v3 operator*(const quat& q, const v3& v)
-{
-    return q.vector * 2.0f * dot_product(q.vector, v) + 
-        v * (q.scalar * q.scalar - dot_product(q.vector, q.vector)) +
-        cross_product(q.vector, v) * 2.0f * q.scalar;
-}
-
-inline v4
-operator*(const v4 &l, const v4 &r)
-{
-    return { l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w };
-}
-
-inline quat
-quat_multiply(const quat &l, const quat &r)
-{
-    return {
-        r.x * l.w + r.y * l.z - r.z * l.y + r.w * l.x,
-        -r.x * l.z + r.y * l.w + r.z * l.x + r.w * l.y,
-        r.x * l.y - r.y * l.x + r.z * l.w + r.w * l.z,
-        -r.x * l.x - r.y * l.y - r.z * l.z + r.w * l.w
     };
 }
 
@@ -122,72 +92,50 @@ operator==(const v3 &v, float f)
         return false;
 }
 
-inline bool
-operator==(const v4 &l, const v4 &r)
+inline void
+operator+=(v3 &l, const v3 &r)
 {
-    if (l.x == r.x, l.y == r.y, l.z == r.z, l.w == r.w)
-        return true;
-    else
-        return false;
-}
-
-inline real32
-length_squared(const v2 &v)
-{
-    return (v.x * v.x) + (v.y * v.y);
-}
-
-inline real32
-length_squared(const v3 &v)
-{
-    return (v.x * v.x) + (v.y * v.y) + (v.z * v.z);
-}
-
-inline real32
-length_squared(const v4 &v)
-{
-    return v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w;
+    l.x = l.x + r.x;
+    l.y = l.y + r.y;
+    l.z = l.z + r.z;
 }
 
 inline void
-normalize(v3 &v)
+operator-=(v3 &l, const v3 &r)
 {
-    real32 len_sq = length_squared(v);
-    if (len_sq < V3_EPSILON)
-        return;
-    else
-    {
-        real32 inverse_length = 1.0f / sqrtf(len_sq);
-        v.x *= inverse_length;
-        v.y *= inverse_length;
-        v.z *= inverse_length;
-    }
+    l.x = l.x - r.x;
+    l.y = l.y - r.y;
+    l.z = l.z - r.z;
 }
 
-inline v2
-normalized(const v2 &v)
+inline void
+operator*=(v3 &l, v3 &r)
 {
-    real32 len_sq = length_squared(v);
-    if (len_sq < V2_EPSILON)
-        return v;
-    else
-    {
-        real32 inverse_length = 1.0f / sqrtf(len_sq);
-        return {v.x * inverse_length, v.y * inverse_length };
-    }
+    l.x *= r.x;
+    l.y *= r.y;
+    l.z *= r.z;
 }
 
-inline v3
-normalized(const v3 &v)
+v3 operator*(const quat& q, const v3& v)
 {
-    real32 len_sq = length_squared(v);
-    if (len_sq < V3_EPSILON)
-        return v;
-    else
-    {
-        real32 inverse_length = 1.0f / sqrtf(len_sq);
-        return {v.x * inverse_length, v.y * inverse_length, v.z * inverse_length};
-    }
+    return q.vector * 2.0f * dot_product(q.vector, v) + 
+        v * (q.scalar * q.scalar - dot_product(q.vector, q.vector)) +
+        cross_product(q.vector, v) * 2.0f * q.scalar;
+}
+
+// v4
+inline v4 operator*(const v4 &l, const v4 &r) { return { l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w }; }
+inline f32 length_squared(const v4 &v) { return v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w; }
+
+inline quat
+quat_multiply(const quat &l, const quat &r)
+{
+    return {
+        r.x * l.w + r.y * l.z - r.z * l.y + r.w * l.x,
+        -r.x * l.z + r.y * l.w + r.z * l.x + r.w * l.y,
+        r.x * l.y - r.y * l.x + r.z * l.w + r.w * l.z,
+        -r.x * l.x - r.y * l.y - r.z * l.z + r.w * l.w
+    };
 }
 
 inline v4
@@ -203,6 +151,16 @@ normalized(const v4 &v)
     }
 }
 
+inline bool
+operator==(const v4 &l, const v4 &r)
+{
+    if (l.x == r.x, l.y == r.y, l.z == r.z, l.w == r.w)
+        return true;
+    else
+        return false;
+}
+
+// m4x4
 inline m4x4
 get_frustum(f32 l, f32 r, f32 b, f32 t, f32 n, f32 f)
 {

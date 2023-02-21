@@ -17,6 +17,25 @@ struct Bitmap
     s32 channels;
 };
 
+struct Sound
+{
+    SDL_AudioSpec spec;
+    u8 *buffer;
+    u32 length;
+};
+
+struct Playing_Sound
+{
+    u8 *position;
+    u32 length_remaining;
+};
+
+struct Audio
+{
+    Playing_Sound sounds[10];
+    u32 num_of_playing_sounds;
+};
+
 //
 // Font
 //

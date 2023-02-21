@@ -67,6 +67,87 @@ init_bitmap_handle(Bitmap *bitmap)
 }
 
 //
+// Sounds
+//
+
+function void
+sdl_print_audio_spec(SDL_AudioSpec *audio_spec)
+{
+    printf("\naudio_spec\n");
+    printf("freq %d\n", audio_spec->freq);
+    printf("format %d\n", SDL_AUDIO_BITSIZE(audio_spec->format));
+    printf("channels %d\n", audio_spec->channels);
+    printf("silence %d\n", audio_spec->silence);
+    printf("samples %d\n", audio_spec->samples);
+    printf("size %d\n", audio_spec->size);
+}
+
+u8 *position;
+u32 length_remaining;
+
+void
+sound_callback(void *userdata, u8 *stream, int length_requested)
+{
+    Playing_Sound *playing_sound = (Playing_Sound*)userdata;
+    
+    if (length_remaining == 0)
+        return;
+    
+    //u32 length_to_mix = (u32)length_requested;
+    //if (length_to_mix > length_remaining)
+    //length_to_mix = length_remaining;
+    
+    length_requested = ( length_requested > length_remaining ? length_remaining : length_requested );
+    
+    SDL_MixAudio(stream, position, length_requested, SDL_MIX_MAXVOLUME);
+    
+    printf("%d\n", position);
+    
+    //playing_sound->position += (int)(length_to_mix);
+    //playing_sound->length_remaining -= (int)(length_to_mix);
+    
+    position += length_requested;
+    printf("%d\n", position);
+    length_remaining -= length_requested;
+}
+
+function Sound
+load_sound(const char *filename)
+{
+    Sound sound = {};
+    SDL_LoadWAV(filename, &sound.spec, &sound.buffer, &sound.length);
+    return sound;
+}
+
+function void
+play_sound(Audio *audio, Sound *sound)
+{
+    Playing_Sound *playing_sound = &audio->sounds[audio->num_of_playing_sounds++];
+    playing_sound->position = sound->buffer;
+    playing_sound->length_remaining = sound->length;
+    sound->spec.callback = sound_callback;
+    sound->spec.userdata = playing_sound;
+    
+    position = sound->buffer;
+    length_remaining = sound->length;
+    
+    /*
+    u32 num_of_audio_devices = SDL_GetNumAudioDevices(0);
+    printf("num audio devices: %d\n", num_of_audio_devices);
+    for (u32 i = 0; i < num_of_audio_devices; i++)
+        printf("name: %s\n", SDL_GetAudioDeviceName(i, 0));
+    */
+    
+    //SDL_AudioDeviceID device = SDL_OpenAudioDevice(NULL, 0, &sound->spec, 0, 0);
+    //SDL_PauseAudioDevice(device, 0);
+    
+    SDL_OpenAudio(&sound->spec, NULL);
+    SDL_PauseAudio(0);
+    
+    sdl_print_audio_spec(&sound->spec);
+}
+
+//
 // Font
 //
 
@@ -151,7 +232,7 @@ load_font(const char *filename)
 }
 
 function void
-draw_string(Font *font, const char *string, v3 coords, f32 pixel_height, v4 color)
+draw_string(Font *font, const char *string, v2 coords, f32 pixel_height, v4 color)
 {
     f32 scale = stbtt_ScaleForPixelHeight(&font->info, pixel_height);
     
@@ -165,7 +246,7 @@ draw_string(Font *font, const char *string, v3 coords, f32 pixel_height, v4 colo
         f32 x = string_x_coord + (font_char->lsb * scale);
         
         v2 dim = { f32(font_char->c_x2 - font_char->c_x1), f32(font_char->c_y2 - font_char->c_y1) };
-        draw_rect({x, y, 0}, dim, &font_char->bitmap);
+        draw_rect({x, y}, dim, &font_char->bitmap);
         
         //printf("char: %c\n", font_char->codepoint);
         int kern = stbtt_GetCodepointKernAdvance(&font->info, string[i], string[i + 1]);

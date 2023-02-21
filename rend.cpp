@@ -197,7 +197,7 @@ init_rect_mesh(Mesh *rect)
 }
 
 function void
-draw_rect(v3 coords, v2 dim, v4 color)
+draw_rect(v2 coords, v2 dim, v4 color)
 {
     local_persist Mesh rect = {};
     if (rect.vertices_count == 0)
@@ -205,21 +205,21 @@ draw_rect(v3 coords, v2 dim, v4 color)
     
     glUseProgram(shader);
     glUniform4fv(glGetUniformLocation(shader, "user_color"), (GLsizei)1, (float*)&color);
-    m4x4 model = create_transform_m4x4(coords, get_rotation(0, {1, 0, 0}), {dim.x, dim.y, 1.0f});
+    m4x4 model = create_transform_m4x4({coords.x, coords.y, 0}, get_rotation(0, {1, 0, 0}), {dim.x, dim.y, 1.0f});
     glUniformMatrix4fv(glGetUniformLocation(shader, "model"), (GLsizei)1, false, (float*)&model);
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), (GLsizei)1, false, (float*)&orthographic_matrix);
     opengl_draw_mesh(&rect);
 }
 
 function void
-draw_rect(v3 coords, v2 dim, Bitmap *bitmap)
+draw_rect(v2 coords, v2 dim, Bitmap *bitmap)
 {
     local_persist Mesh rect = {};
     if (rect.vertices_count == 0)
         init_rect_mesh(&rect);
     
     glUseProgram(tex_shader);
-    m4x4 model = create_transform_m4x4(coords, get_rotation(0, {1, 0, 0}), {dim.x, dim.y, 1.0f});
+    m4x4 model = create_transform_m4x4({coords.x, coords.y, 0}, get_rotation(0, {1, 0, 0}), {dim.x, dim.y, 1.0f});
     glUniformMatrix4fv(glGetUniformLocation(tex_shader, "model"), (GLsizei)1, false, (float*)&model);
     glUniformMatrix4fv(glGetUniformLocation(tex_shader, "projection"), (GLsizei)1, false, (float*)&orthographic_matrix);
     
