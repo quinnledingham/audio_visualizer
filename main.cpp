@@ -202,7 +202,8 @@ do_one_frame(Application *app)
             f32 total = 0.0f;
             for (s32 j = 0; j < (s32)amt_avg; j++)
             {
-                total += (f32)*ptr--;
+                if (ptr > sound->buffer)
+                    total += (f32)*ptr--;
             }
             heights[i] = total / amt_avg;
             heights_total += heights[i];

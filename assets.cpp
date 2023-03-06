@@ -105,7 +105,7 @@ sdl_load_audio_device(SDL_AudioSpec *spec)
         SDL_Log("name: %s\n", SDL_GetAudioDeviceName(i, 0));
     
     SDL_AudioDeviceID device_id = SDL_OpenAudioDevice(NULL, 0, spec, NULL, 0);
-    SDL_Log("id: %d\n", device_id);
+    SDL_Log("id: %d %s\n", device_id, SDL_GetAudioDeviceName(device_id, 0));
     sdl_print_audio_spec(spec);
     
     return device_id;
